@@ -1110,6 +1110,7 @@ body.lavish {
   overflow: hidden;
 }
 .panel {
+  position: relative;
   width: var(--panel-w);
   border-left: var(--hairline-subtle);
   background: var(--bg-panel);
@@ -1117,6 +1118,49 @@ body.lavish {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+/* The drag handle straddles the panel's left hairline so its hit area is wider than the line it
+   lights up. chrome-client.js owns the width it sets (an inline `--panel-w` on the root). */
+.panel-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  z-index: 5;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+.panel-resizer:hover::before {
+  background: var(--border-strong);
+}
+.panel-resizer:focus-visible {
+  outline: none;
+}
+.panel-resizer:focus-visible::before,
+body.panel-resizing .panel-resizer::before {
+  background: var(--accent);
+}
+/* Mid-drag the cursor stays a resize cursor over every element, and no iframe may take the
+   pointer away from the handle. */
+body.panel-resizing,
+body.panel-resizing * {
+  cursor: col-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.panel-resizing iframe {
+  pointer-events: none;
 }
 /* A collapsed panel gives its whole column back to the artifact. Scoped to the exact complement of
    the phone breakpoint so the stored desktop preference can never hide the phone dock. */
@@ -1811,6 +1855,10 @@ body.layout-gate-active iframe#artifact {
   }
   .panel.is-dragging {
     transition: none;
+  }
+  /* The sheet spans the viewport; its width is not the user's to drag. */
+  .panel-resizer {
+    display: none;
   }
   .panel-head {
     display: flex;

@@ -119,6 +119,7 @@ const panelHead = /** @type {HTMLDivElement} */ (document.getElementById("panelH
 const panelSummary = /** @type {HTMLSpanElement} */ (document.getElementById("panelSummary"));
 const panelToggle = /** @type {HTMLButtonElement} */ (document.getElementById("panelToggle"));
 const panelScrim = /** @type {HTMLDivElement} */ (document.getElementById("panelScrim"));
+const panelResizer = /** @type {HTMLDivElement} */ (document.getElementById("panelResizer"));
 const sidebarToggle = /** @type {HTMLButtonElement} */ (document.getElementById("sidebarToggle"));
 const sidebarToggleCount = /** @type {HTMLSpanElement} */ (document.getElementById("sidebarToggleCount"));
 const sendButton = /** @type {HTMLButtonElement} */ (document.getElementById("send"));
@@ -1552,6 +1553,126 @@ function renderSidebarToggle() {
 }
 
 sidebarToggle.addEventListener("click", () => setPanelCollapsed(!panelCollapsed));
+
+// ---- Desktop conversation panel width ----
+// Above the phone breakpoint the panel's left edge is a drag handle that widens the conversation
+// at the artifact's expense. Like the collapse state, the width is a per-viewer preference kept in
+// localStorage under one key for every session. It is applied as an inline `--panel-w` on the root,
+// which chrome.css reads only outside the phone breakpoint, so a stored width never touches the
+// phone sheet. With no override the CSS token is the width; double-clicking the handle returns there.
+const panelWidthStorageKey = "lavish-axi:panel-width";
+// Matches `--panel-w` in chrome.css: the default width is also the narrowest the panel may get.
+const PANEL_MIN_WIDTH_PX = 360;
+// The panel never takes more than this share of the viewport, so the artifact keeps a usable column.
+const PANEL_MAX_VIEWPORT_SHARE = 0.7;
+const PANEL_KEY_STEP_PX = 16;
+// The stored preference in pixels, or null for the CSS default. It is kept unclamped by the
+// current viewport so a temporarily narrow window does not shrink it for good.
+let panelWidth = readPanelWidth();
+/** @type {{ pointerId: number, startX: number, startWidth: number, moved: boolean } | null} */
+let panelResize = null;
+
+function readPanelWidth() {
+  try {
+    const stored = Math.round(Number(localStorage.getItem(panelWidthStorageKey)));
+    return Number.isFinite(stored) && stored > PANEL_MIN_WIDTH_PX ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function maxPanelWidth() {
+  const viewport = Number(window.innerWidth);
+  if (!(viewport > 0)) return PANEL_MIN_WIDTH_PX;
+  return Math.max(PANEL_MIN_WIDTH_PX, Math.floor(viewport * PANEL_MAX_VIEWPORT_SHARE));
+}
+
+function clampPanelWidth(width) {
+  return Math.min(maxPanelWidth(), Math.max(PANEL_MIN_WIDTH_PX, Math.round(width)));
+}
+
+function displayedPanelWidth() {
+  return panelWidth === null ? PANEL_MIN_WIDTH_PX : clampPanelWidth(panelWidth);
+}
+
+function applyPanelWidth() {
+  const width = displayedPanelWidth();
+  const root = document.documentElement;
+  if (root && root.style && typeof root.style.setProperty === "function") {
+    if (width > PANEL_MIN_WIDTH_PX) root.style.setProperty("--panel-w", width + "px");
+    else root.style.removeProperty("--panel-w");
+  }
+  panelResizer.setAttribute("aria-valuemin", String(PANEL_MIN_WIDTH_PX));
+  panelResizer.setAttribute("aria-valuemax", String(maxPanelWidth()));
+  panelResizer.setAttribute("aria-valuenow", String(width));
+}
+
+function setPanelWidth(width) {
+  const next = width === null ? PANEL_MIN_WIDTH_PX : clampPanelWidth(width);
+  panelWidth = next > PANEL_MIN_WIDTH_PX ? next : null;
+  applyPanelWidth();
+}
+
+function storePanelWidth() {
+  try {
+    if (panelWidth === null) localStorage.removeItem(panelWidthStorageKey);
+    else localStorage.setItem(panelWidthStorageKey, String(panelWidth));
+  } catch {
+    // Storage refused only means the width does not survive a reload.
+  }
+}
+
+function finishPanelResize(event) {
+  if (!panelResize || event.pointerId !== panelResize.pointerId) return;
+  const moved = panelResize.moved;
+  panelResize = null;
+  document.body.classList.remove("panel-resizing");
+  if (moved) storePanelWidth();
+}
+
+panelResizer.addEventListener("pointerdown", (event) => {
+  if (isMobileSheet() || event.button || panelResize) return;
+  // No text selection or focus shift while the pointer drags the edge.
+  event.preventDefault();
+  panelResize = {
+    pointerId: event.pointerId,
+    startX: Number(event.clientX),
+    startWidth: displayedPanelWidth(),
+    moved: false,
+  };
+  // Capture keeps every move on the handle, and `panel-resizing` stops the artifact iframe from
+  // swallowing the pointer when it crosses into the frame.
+  if (typeof panelResizer.setPointerCapture === "function") panelResizer.setPointerCapture(event.pointerId);
+  document.body.classList.add("panel-resizing");
+});
+panelResizer.addEventListener("pointermove", (event) => {
+  if (!panelResize || event.pointerId !== panelResize.pointerId) return;
+  // A move with no button held means the release never reached the handle; end the drag there.
+  if (event.buttons === 0) {
+    finishPanelResize(event);
+    return;
+  }
+  const delta = panelResize.startX - Number(event.clientX);
+  if (delta === 0 && !panelResize.moved) return;
+  panelResize.moved = true;
+  setPanelWidth(panelResize.startWidth + delta);
+});
+panelResizer.addEventListener("pointerup", finishPanelResize);
+panelResizer.addEventListener("pointercancel", finishPanelResize);
+panelResizer.addEventListener("lostpointercapture", finishPanelResize);
+panelResizer.addEventListener("dblclick", () => {
+  setPanelWidth(null);
+  storePanelWidth();
+});
+panelResizer.addEventListener("keydown", (event) => {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  const step = event.key === "ArrowLeft" ? PANEL_KEY_STEP_PX : -PANEL_KEY_STEP_PX;
+  setPanelWidth(displayedPanelWidth() + step);
+  storePanelWidth();
+});
+window.addEventListener("resize", applyPanelWidth);
+applyPanelWidth();
 
 function scrollElementIntoView(el) {
   el.scrollIntoView({ block: "nearest", inline: "nearest" });

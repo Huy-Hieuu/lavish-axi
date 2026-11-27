@@ -34,3 +34,15 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm test
       - run: pnpm run build
+      # An installable tarball, so a change can be tried with `npm i -g <tgz>` without a local build.
+      # `npm pack` runs `prepack`, which rebuilds dist/.
+      - name: Pack installable tarball
+        if: matrix.os == 'ubuntu-latest'
+        run: npm pack
+      - name: Upload installable tarball
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: lavish-axi-tarball
+          path: lavish-axi-*.tgz
+          if-no-files-found: error
