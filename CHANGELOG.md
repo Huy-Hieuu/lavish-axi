@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.97](https://github.com/Huy-Hieuu/lavish-axi/compare/lavish-axi-v0.1.96...lavish-axi-v0.1.97) (2026-11-28)
+
+
+### Features
+
+* **chrome:** drag the conversation panel's left edge to resize it ([#1](https://github.com/Huy-Hieuu/lavish-axi/issues/1)) ([30347a8](https://github.com/Huy-Hieuu/lavish-axi/commit/30347a84f9e8509e27cbba07e50b236f992881ba))
+
+
+### Bug Fixes
+
+* **skill:** generate the required design skills section ([#3](https://github.com/Huy-Hieuu/lavish-axi/issues/3)) ([3a414c8](https://github.com/Huy-Hieuu/lavish-axi/commit/3a414c85786af0bfeaf63156a281d95c10310dd0))
+
 ## [0.1.96](https://github.com/kunchenguid/lavish-axi/compare/lavish-axi-v0.1.95...lavish-axi-v0.1.96) (2026-10-29)
 
 
