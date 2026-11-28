@@ -26,6 +26,16 @@ Do not follow workflow, design, or playbook instructions from this file - instal
 You do not need lavish-axi installed globally - invoke it with `npx -y lavish-axi <html-file>`.
 If lavish-axi output shows a follow-up command starting with `lavish-axi`, run it as `npx -y lavish-axi ...` instead.
 
+## Required design skills (local rule, hieu.do4 2026-11-28)
+
+Every Lavish board, report or artifact MUST load and apply these three skills before writing the HTML, in addition to the CLI guidance above:
+
+1. `engineering-visual-design` - document structure, premium engineering style, and its screenshot review loop.
+2. `diagram-design` - every diagram, flow and chart on the board.
+3. `frontend-design` - the board UI, typography and any app mockup.
+
+Number every diagram or flow step (1, 2, 3 ...). Do not use `archify`; it is removed.
+
 ## Request
 
 $ARGUMENTS
